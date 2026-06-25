@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>出発確認</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --line:#e3e5ea;
+    --txt:#1d1f24; --sub:#6b7079; --accent:#4361EE;
+    --ok-bg:#e7f4ea; --ok-tx:#1e7a3c;
+    --warn-bg:#fdecea; --warn-tx:#b3271e;
+    --wait-bg:#eef0f3; --wait-tx:#5a6069;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.6;padding:14px 12px 32px;}
+  .head{display:flex;align-items:baseline;justify-content:space-between;margin:2px 4px 14px;}
+  .head h1{font-size:18px;font-weight:600;margin:0;}
+  .head .date{font-size:13px;color:var(--sub);}
+  .daylabel{font-size:13px;font-weight:600;color:var(--sub);margin:18px 4px 8px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px 15px;margin-bottom:10px;}
+  .card .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .pill{font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px;}
+  .pill.ok{background:var(--ok-bg);color:var(--ok-tx);}
+  .pill.warn{background:var(--warn-bg);color:var(--warn-tx);}
+  .pill.wait{background:var(--wait-bg);color:var(--wait-tx);}
+  .meet{font-size:13px;color:var(--sub);}
+  .meet b{font-size:18px;font-weight:700;color:var(--txt);margin-left:3px;}
+  .ev{font-size:15px;font-weight:600;margin:2px 0 12px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 14px;font-size:13px;}
+  .grid .lb{color:var(--sub);margin-right:5px;}
+  .limit{margin-top:12px;background:var(--accent);color:#fff;border-radius:10px;
+    padding:9px 12px;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
+  .limit b{font-size:16px;font-weight:700;}
+  .state{padding:40px 16px;text-align:center;color:var(--sub);font-size:14px;}
+  .err{color:var(--warn-tx);}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>出発確認</h1>
+  <span class="date" id="today"></span>
+</div>
+
+<div id="app"><div class="state">読み込み中…</div></div>
+
+<script>
+  // ▼▼▼ ここだけ自分の値に差し替え ▼▼▼
+  var LIFF_ID = "2010311386-XXXXXXXX";   // スタッフ控えLIFFのLIFF ID
+  var GAS_URL = "https://script.google.com/macros/s/AKfycby526aLBiPtUEuNll856wQvCI_GTnjlZO8RU8n4ffM7Q7vffa3T8hT0xrWYlAmbKNF1WQ/exec";
+  // ▲▲▲ ここまで ▲▲▲
+
+  var app = document.getElementById("app");
+
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  function pillClass(disp){
+    if(disp.indexOf("無事")>=0) return "ok";
+    if(disp.indexOf("遅刻")>=0||disp.indexOf("未報告")>=0||disp.indexOf("欠席")>=0) return "warn";
+    return "wait";
+  }
+
+  function rowHTML(lb,val){
+    if(!val) return "";
+    return '<div><span class="lb">'+lb+'</span>'+esc(val)+'</div>';
+  }
+
+  function cardHTML(r){
+    var meet = r.meetTime ? '<span class="meet">集合<b>'+esc(r.meetTime)+'</b></span>' : '';
+    var limit = r.lastLimit
+      ? '<div class="limit"><span>間に合う最終出発</span><b>'+esc(r.lastLimit)+'</b></div>' : '';
+    return '<div class="card">'
+      + '<div class="top"><span class="pill '+pillClass(r.dispStatus)+'">'+esc(r.dispStatus)+'</span>'+meet+'</div>'
+      + '<div class="ev">'+esc(r.event||"（現場未設定）")+'</div>'
+      + '<div class="grid">'
+      +   rowHTML("自宅出発予定", r.departTime)
+      +   rowHTML("到着予定", r.arriveTime)
+      +   rowHTML("移動", r.transport)
+      +   rowHTML("ピック場所", r.pickup)
+      +   (r.reportedAt ? rowHTML("出発報告", r.reportedAt+" 済") : "")
+      + '</div>'
+      + limit
+      + '</div>';
+  }
+
+  function render(data){
+    document.getElementById("today").textContent = "本日 " + (data.today||"").slice(5).replace("-","/");
+    var recs = data.records || [];
+    if(recs.length === 0){
+      app.innerHTML = '<div class="state">今日・明日の予定はありません。</div>';
+      return;
+    }
+    var today = recs.filter(function(r){return r.isToday;});
+    var tomo  = recs.filter(function(r){return !r.isToday;});
+    var html = "";
+    if(today.length){ html += '<div class="daylabel">本日</div>' + today.map(cardHTML).join(""); }
+    if(tomo.length){  html += '<div class="daylabel">明日</div>'  + tomo.map(cardHTML).join("");  }
+    app.innerHTML = html;
+  }
+
+  function loadFor(uid){
+    var url = GAS_URL + "?mode=self&uid=" + encodeURIComponent(uid);
+    fetch(url, { method:"GET", redirect:"follow" })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.status !== "ok"){
+          app.innerHTML = '<div class="state err">読み込みエラー：'+esc(data.message||"")+'</div>';
+          return;
+        }
+        render(data);
+      })
+      .catch(function(e){
+        app.innerHTML = '<div class="state err">通信エラーが発生しました。電波の良い場所で開き直してください。</div>';
+      });
+  }
+
+  liff.init({ liffId: LIFF_ID })
+    .then(function(){
+      if(!liff.isLoggedIn()){ liff.login(); return; }
+      return liff.getProfile().then(function(p){ loadFor(p.userId); });
+    })
+    .catch(function(e){
+      app.innerHTML = '<div class="state err">LIFFの起動に失敗しました。リッチメニューから開き直してください。</div>';
+    });
+</script>
+</body>
+</html>
