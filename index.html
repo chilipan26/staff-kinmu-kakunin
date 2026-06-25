@@ -16,35 +16,36 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:var(--bg);color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
-    line-height:1.6;padding:14px 12px 32px;}
-  .head{display:flex;align-items:baseline;justify-content:space-between;margin:2px 4px 14px;}
-  .head h1{font-size:18px;font-weight:600;margin:0;}
-  .head .date{font-size:13px;color:var(--sub);}
-  .daylabel{font-size:13px;font-weight:600;color:var(--sub);margin:18px 4px 8px;}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-    padding:14px 15px;margin-bottom:10px;}
-  .card .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-  .pill{font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px;}
+    line-height:1.7;padding:18px 14px 40px;}
+  .head{margin:4px 4px 18px;}
+  .head h1{font-size:26px;font-weight:700;margin:0;}
+  .daylabel{font-size:19px;font-weight:700;color:var(--sub);margin:24px 4px 10px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:18px 18px;margin-bottom:14px;}
+  .card .top{display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .pill{font-size:17px;font-weight:700;padding:6px 16px;border-radius:24px;}
   .pill.ok{background:var(--ok-bg);color:var(--ok-tx);}
   .pill.warn{background:var(--warn-bg);color:var(--warn-tx);}
   .pill.wait{background:var(--wait-bg);color:var(--wait-tx);}
-  .meet{font-size:13px;color:var(--sub);}
-  .meet b{font-size:18px;font-weight:700;color:var(--txt);margin-left:3px;}
-  .ev{font-size:15px;font-weight:600;margin:2px 0 12px;}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 14px;font-size:13px;}
-  .grid .lb{color:var(--sub);margin-right:5px;}
-  .limit{margin-top:12px;background:var(--accent);color:#fff;border-radius:10px;
-    padding:9px 12px;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
-  .limit b{font-size:16px;font-weight:700;}
-  .state{padding:40px 16px;text-align:center;color:var(--sub);font-size:14px;}
+  .meet{font-size:18px;color:var(--sub);}
+  .meet b{font-size:30px;font-weight:700;color:var(--txt);margin-left:5px;}
+  .ev{font-size:24px;font-weight:700;margin:4px 0 16px;}
+  .grid{display:flex;flex-direction:column;gap:12px;font-size:21px;}
+  .grid .lb{display:block;color:var(--sub);font-size:16px;margin-bottom:1px;}
+  .grid .vl{font-weight:700;}
+  .limit{margin-top:16px;background:var(--accent);color:#fff;border-radius:12px;
+    padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .limit span{font-size:18px;}
+  .limit b{font-size:30px;font-weight:700;}
+  .state{padding:50px 16px;text-align:center;color:var(--sub);font-size:20px;}
   .err{color:var(--warn-tx);}
 </style>
 </head>
 <body>
 
 <div class="head">
-  <h1>出発確認</h1>
-  <span class="date" id="today"></span>
+  <h1 id="title">勤務情報</h1>
 </div>
 
 <div id="app"><div class="state">読み込み中…</div></div>
@@ -68,7 +69,7 @@
 
   function rowHTML(lb,val){
     if(!val) return "";
-    return '<div><span class="lb">'+lb+'</span>'+esc(val)+'</div>';
+    return '<div><span class="lb">'+lb+'</span><span class="vl">'+esc(val)+'</span></div>';
   }
 
   function cardHTML(r){
@@ -90,7 +91,11 @@
   }
 
   function render(data){
-    document.getElementById("today").textContent = "本日 " + (data.today||"").slice(5).replace("-","/");
+    var t = data.today || "";
+    var mmdd = "";
+    var m = t.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    if(m){ mmdd = Number(m[1]) + "月" + Number(m[2]) + "日"; }
+    document.getElementById("title").textContent = (mmdd ? mmdd : "") + "の勤務情報";
     var recs = data.records || [];
     if(recs.length === 0){
       app.innerHTML = '<div class="state">今日・明日の予定はありません。</div>';
