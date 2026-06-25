@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>出発確認</title>
+<title>出発監視（BO）</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root{
@@ -16,54 +16,67 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:var(--bg);color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
-    line-height:1.7;padding:18px 14px 40px;}
-  .head{margin:4px 4px 18px;}
-  .head h1{font-size:26px;font-weight:700;margin:0;}
-  .daylabel{font-size:19px;font-weight:700;color:var(--sub);margin:24px 4px 10px;}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
-    padding:18px 18px;margin-bottom:14px;}
-  .card .top{display:flex;align-items:center;justify-content:space-between;
-    flex-wrap:wrap;gap:8px;margin-bottom:10px;}
-  .pill{font-size:17px;font-weight:700;padding:6px 16px;border-radius:24px;}
+    line-height:1.6;padding:16px 13px 40px;}
+  .head{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px;}
+  .head h1{font-size:22px;font-weight:700;margin:0;}
+  .refresh{border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;
+    padding:8px 14px;border-radius:20px;}
+  .updated{font-size:12px;color:var(--sub);margin:0 2px 14px;}
+  .summary{display:flex;gap:8px;margin:0 0 16px;}
+  .chip{flex:1;text-align:center;border-radius:12px;padding:10px 4px;}
+  .chip .n{font-size:24px;font-weight:700;display:block;line-height:1.2;}
+  .chip .l{font-size:12px;}
+  .chip.warn{background:var(--warn-bg);color:var(--warn-tx);}
+  .chip.wait{background:var(--wait-bg);color:var(--wait-tx);}
+  .chip.ok{background:var(--ok-bg);color:var(--ok-tx);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:15px;
+    padding:15px 16px;margin-bottom:12px;}
+  .card.alert{border-color:#f3b6b0;}
+  .top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:7px;}
+  .pill{font-size:14px;font-weight:700;padding:4px 13px;border-radius:22px;}
   .pill.ok{background:var(--ok-bg);color:var(--ok-tx);}
   .pill.warn{background:var(--warn-bg);color:var(--warn-tx);}
   .pill.wait{background:var(--wait-bg);color:var(--wait-tx);}
-  .meet{font-size:18px;color:var(--sub);}
-  .meet b{font-size:30px;font-weight:700;color:var(--txt);margin-left:5px;}
-  .ev{font-size:24px;font-weight:700;margin:4px 0 16px;}
-  .grid{display:flex;flex-direction:column;gap:12px;font-size:21px;}
-  .grid .lb{display:block;color:var(--sub);font-size:16px;margin-bottom:1px;}
+  .meet{font-size:15px;color:var(--sub);}
+  .meet b{font-size:24px;font-weight:700;color:var(--txt);margin-left:4px;}
+  .nm{font-size:21px;font-weight:700;margin:2px 0 1px;}
+  .ev{font-size:15px;color:var(--sub);margin-bottom:13px;}
+  .grid{display:flex;flex-direction:column;gap:9px;font-size:17px;}
+  .grid .lb{display:block;color:var(--sub);font-size:14px;margin-bottom:0;}
   .grid .vl{font-weight:700;}
-  .limit{margin-top:16px;background:var(--accent);color:#fff;border-radius:12px;
-    padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .limit span{font-size:18px;}
-  .limit b{font-size:30px;font-weight:700;}
-  .state{padding:50px 16px;text-align:center;color:var(--sub);font-size:20px;}
+  .limit{margin-top:13px;background:var(--accent);color:#fff;border-radius:11px;
+    padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .limit span{font-size:15px;}
+  .limit b{font-size:24px;font-weight:700;}
+  .state{padding:50px 16px;text-align:center;color:var(--sub);font-size:18px;}
   .err{color:var(--warn-tx);}
 </style>
 </head>
 <body>
 
 <div class="head">
-  <h1 id="title">勤務情報</h1>
+  <h1 id="title">出発状況</h1>
+  <button class="refresh" id="btn" onclick="reload()">更新</button>
 </div>
-
+<div class="updated" id="updated"></div>
+<div id="summary"></div>
 <div id="app"><div class="state">読み込み中…</div></div>
 
 <script>
-  // ▼▼▼ ここだけ自分の値に差し替え ▼▼▼
-  var LIFF_ID = "2010311386-bDypK7p5";   // スタッフ控えLIFFのLIFF ID
+  // ▼▼▼ ここだけ差し替え ▼▼▼
+  var LIFF_ID = "2010513438-agAX3Stv";   // ← BO管理LIFFのLIFF ID（中西さん用の公式LINE）
   var GAS_URL = "https://script.google.com/macros/s/AKfycby526aLBiPtUEuNll856wQvCI_GTnjlZO8RU8n4ffM7Q7vffa3T8hT0xrWYlAmbKNF1WQ/exec";
   // ▲▲▲ ここまで ▲▲▲
 
   var app = document.getElementById("app");
+  var ALERT = "🚨 要確認", WAIT = "⏳ 未出発", OK = "👍 出発済";
 
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 
   function pillClass(disp){
-    if(disp.indexOf("無事")>=0) return "ok";
-    if(disp.indexOf("遅刻")>=0||disp.indexOf("未報告")>=0||disp.indexOf("欠席")>=0) return "warn";
+    if(disp.indexOf("出発済")>=0) return "ok";
+    if(disp.indexOf("要確認")>=0) return "warn";
     return "wait";
   }
 
@@ -76,14 +89,14 @@
     var meet = r.meetTime ? '<span class="meet">集合<b>'+esc(r.meetTime)+'</b></span>' : '';
     var limit = r.lastLimit
       ? '<div class="limit"><span>間に合う最終出発</span><b>'+esc(r.lastLimit)+'</b></div>' : '';
-
-    // 移動区分でラベルを出し分け（電車→電車の出発／ピック→ピック時間／なし等→非表示）
     var trLabel = "";
     if (r.transport.indexOf("電車") >= 0) trLabel = "電車の出発";
     else if (r.transport.indexOf("ピック") >= 0) trLabel = "ピック時間";
+    var isAlert = r.dispStatus.indexOf("要確認") >= 0;
 
-    return '<div class="card">'
+    return '<div class="card'+(isAlert?' alert':'')+'">'
       + '<div class="top"><span class="pill '+pillClass(r.dispStatus)+'">'+esc(r.dispStatus)+'</span>'+meet+'</div>'
+      + '<div class="nm">'+esc(r.name||"（担当者未設定）")+'</div>'
       + '<div class="ev">'+esc(r.event||"（現場未設定）")+'</div>'
       + '<div class="grid">'
       +   rowHTML("自宅出発予定", r.departTime)
@@ -97,48 +110,67 @@
       + '</div>';
   }
 
-  function render(data){
-    var t = data.today || "";
-    var mmdd = "";
-    var m = t.match(/^\d{4}-(\d{2})-(\d{2})$/);
-    if(m){ mmdd = Number(m[1]) + "月" + Number(m[2]) + "日"; }
-    document.getElementById("title").textContent = (mmdd ? mmdd : "") + "の勤務情報";
-    var recs = data.records || [];
-    if(recs.length === 0){
-      app.innerHTML = '<div class="state">今日・明日の予定はありません。</div>';
-      return;
-    }
-    var today = recs.filter(function(r){return r.isToday;});
-    var tomo  = recs.filter(function(r){return !r.isToday;});
-    var html = "";
-    if(today.length){ html += '<div class="daylabel">本日</div>' + today.map(cardHTML).join(""); }
-    if(tomo.length){  html += '<div class="daylabel">明日</div>'  + tomo.map(cardHTML).join("");  }
-    app.innerHTML = html;
+  function summaryHTML(recs){
+    var a=0,w=0,o=0;
+    recs.forEach(function(r){
+      if(r.dispStatus.indexOf("要確認")>=0) a++;
+      else if(r.dispStatus.indexOf("出発済")>=0) o++;
+      else w++;
+    });
+    return '<div class="summary">'
+      + '<div class="chip warn"><span class="n">'+a+'</span><span class="l">要確認</span></div>'
+      + '<div class="chip wait"><span class="n">'+w+'</span><span class="l">未出発</span></div>'
+      + '<div class="chip ok"><span class="n">'+o+'</span><span class="l">出発済</span></div>'
+      + '</div>';
   }
 
-  function loadFor(uid){
-    var url = GAS_URL + "?mode=self&uid=" + encodeURIComponent(uid);
-    fetch(url, { method:"GET", redirect:"follow" })
+  function render(data){
+    var t = data.today || "";
+    var m = t.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    var mmdd = m ? (Number(m[1])+"月"+Number(m[2])+"日") : "";
+    document.getElementById("title").textContent = (mmdd?mmdd+" ":"") + "出発状況";
+
+    var now = new Date();
+    var pad = function(n){return ('0'+n).slice(-2);};
+    document.getElementById("updated").textContent =
+      "更新 " + pad(now.getHours()) + ":" + pad(now.getMinutes());
+
+    var recs = data.records || [];
+    document.getElementById("summary").innerHTML = recs.length ? summaryHTML(recs) : "";
+    if(recs.length === 0){
+      app.innerHTML = '<div class="state">本日の予定はまだありません。</div>';
+      return;
+    }
+    app.innerHTML = recs.map(cardHTML).join("");
+  }
+
+  function reload(){
+    var btn = document.getElementById("btn");
+    btn.textContent = "更新中…"; btn.disabled = true;
+    fetch(GAS_URL + "?mode=admin", { method:"GET", redirect:"follow" })
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(data.status !== "ok"){
           app.innerHTML = '<div class="state err">読み込みエラー：'+esc(data.message||"")+'</div>';
-          return;
-        }
-        render(data);
+        } else { render(data); }
       })
       .catch(function(e){
-        app.innerHTML = '<div class="state err">通信エラーが発生しました。電波の良い場所で開き直してください。</div>';
-      });
+        app.innerHTML = '<div class="state err">通信エラー。電波の良い場所で更新してください。</div>';
+      })
+      .then(function(){ btn.textContent = "更新"; btn.disabled = false; });
   }
+
+  // 60秒ごとに自動更新（監視用）
+  setInterval(reload, 60000);
 
   liff.init({ liffId: LIFF_ID })
     .then(function(){
       if(!liff.isLoggedIn()){ liff.login(); return; }
-      return liff.getProfile().then(function(p){ loadFor(p.userId); });
+      reload();
     })
     .catch(function(e){
-      app.innerHTML = '<div class="state err">LIFFの起動に失敗しました。リッチメニューから開き直してください。</div>';
+      // LIFF外（ブラウザ直開き）でも一応データは出す
+      reload();
     });
 </script>
 </body>
