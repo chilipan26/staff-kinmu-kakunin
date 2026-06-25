@@ -76,6 +76,12 @@
     var meet = r.meetTime ? '<span class="meet">集合<b>'+esc(r.meetTime)+'</b></span>' : '';
     var limit = r.lastLimit
       ? '<div class="limit"><span>間に合う最終出発</span><b>'+esc(r.lastLimit)+'</b></div>' : '';
+
+    // 移動区分でラベルを出し分け（電車→電車の出発／ピック→ピック時間／なし等→非表示）
+    var trLabel = "";
+    if (r.transport.indexOf("電車") >= 0) trLabel = "電車の出発";
+    else if (r.transport.indexOf("ピック") >= 0) trLabel = "ピック時間";
+
     return '<div class="card">'
       + '<div class="top"><span class="pill '+pillClass(r.dispStatus)+'">'+esc(r.dispStatus)+'</span>'+meet+'</div>'
       + '<div class="ev">'+esc(r.event||"（現場未設定）")+'</div>'
@@ -83,6 +89,7 @@
       +   rowHTML("自宅出発予定", r.departTime)
       +   rowHTML("到着予定", r.arriveTime)
       +   rowHTML("移動", r.transport)
+      +   rowHTML(trLabel, r.transportTime)
       +   rowHTML("ピック場所", r.pickup)
       +   (r.reportedAt ? rowHTML("出発報告", r.reportedAt+" 済") : "")
       + '</div>'
